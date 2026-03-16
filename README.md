@@ -15,6 +15,7 @@ Azure のインフラをコードで管理する **Azure Bicep** の基礎を、
 | [Step 2 — Web Apps](step2-webapp/README.md) | App Service へのアプリデプロイ | `module`・モジュール間 output 参照・`uniqueString()`・`appSettings` |
 | [Step 3 — Azure Functions](step3-functions/README.md) | サーバーレス Functions のデプロイ | Managed Identity・RBAC ロール割り当て・identity-based connection・Consumption プラン |
 | [Step 4 — セキュアな VM](step4-secure-vm/README.md) | Bastion + Managed Identity による VM | Azure Bastion・Key Vault・パブリック IP 排除・`existing` リソース参照 |
+| [Step 5 — コスト分析・予算管理](step5-cost-mgmt/README.md) | 予算アラート・ストレージ・Action Group のデプロイ | `targetScope = 'subscription'`・`az deployment sub create`・モジュールへの `scope` 指定・`utcNow()` の制約・`location: 'global'`・Azure Policy との衝突 |
 
 ---
 
@@ -39,13 +40,22 @@ base_bicep/
 │   │   ├── storageAccount.bicep
 │   │   └── functionApp.bicep
 │   └── README.md
-└── step4-secure-vm/
-    ├── main.bicep          # モジュールを呼び出すエントリポイント
+├── step4-secure-vm/
+│   ├── main.bicep          # モジュールを呼び出すエントリポイント
+│   ├── modules/
+│   │   ├── network.bicep   # VNet / サブネット / NSG
+│   │   ├── bastion.bicep   # Azure Bastion / パブリック IP
+│   │   ├── vm.bicep        # VM（Managed Identity・パブリック IP なし）
+│   │   └── keyVault.bicep  # Key Vault / RBAC ロール割り当て
+│   └── README.md
+└── step5-cost-mgmt/
+    ├── main.bicep          # targetScope = 'subscription' のエントリポイント
     ├── modules/
-    │   ├── network.bicep   # VNet / サブネット / NSG
-    │   ├── bastion.bicep   # Azure Bastion / パブリック IP
-    │   ├── vm.bicep        # VM（Managed Identity・パブリック IP なし）
-    │   └── keyVault.bicep  # Key Vault / RBAC ロール割り当て
+    │   ├── actionGroup.bicep  # 通知先グループ（location: 'global' 固定）
+    │   ├── budget.bicep       # 月次予算 / 3段階アラートしきい値
+    │   ├── storage.bicep      # ストレージアカウント / Blob コンテナ
+    │   ├── costExport.bicep   # コストエクスポート定義（参照用・Policy制約で未使用）
+    │   └── exportRbac.bicep   # エクスポート MI へのロール付与（参照用・未使用）
     └── README.md
 ```
 

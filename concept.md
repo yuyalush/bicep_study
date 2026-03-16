@@ -71,6 +71,38 @@
 
 ---
 
+### Step 5 — コスト分析・予算管理
+
+**目標**: Azure Cost Management のリソースを Bicep でデプロイし、サブスクリプションのコストを継続的に把握・制御する仕組みを構築する。
+
+学習内容:
+- **サブスクリプションスコープのデプロイ**: `targetScope = 'subscription'` を使って、リソースグループを超えたスコープに Bicep をデプロイする方法
+- **予算アラート**（`Microsoft.Consumption/budgets`）: 月次予算の上限と通知しきい値（例: 80%・100%）を定義し、超過時にメール通知を送る
+- **Action Group**（`Microsoft.Insights/actionGroups`）: アラートの通知先（メールアドレス等）を Bicep で管理する
+- **コストエクスポート**（`Microsoft.CostManagement/exports`）: コストデータを定期的にストレージアカウントへ CSV 出力し、Power BI や Excel で分析できるようにする
+- Step 3・4 で登場した `Microsoft.Authorization/roleAssignments` との組み合わせ: エクスポート先ストレージアカウントへのロール付与
+
+**Step 4 との主な構成変更点**:
+
+| 項目 | Step 1〜4 | Step 5 |
+|---|---|---|
+| デプロイスコープ | リソースグループ | **サブスクリプション** |
+| 対象リソース | コンピューティング・ネットワーク | **コスト管理リソース** |
+| Bicep の `targetScope` | `'resourceGroup'`（省略可） | **`'subscription'`** |
+| デプロイコマンド | `az deployment group create` | **`az deployment sub create`** |
+
+**構成するリソース**:
+
+```
+サブスクリプション
+├── Microsoft.Consumption/budgets        # 月次予算（しきい値・通知条件）
+├── Microsoft.Insights/actionGroups      # 通知先グループ（メール等）
+└── Microsoft.CostManagement/exports     # コストデータの定期エクスポート
+    └── 出力先: ストレージアカウント（既存 or 新規作成）
+```
+
+---
+
 ## ディレクトリ構成（予定）
 
 ```
@@ -87,8 +119,12 @@ base_bicep/
 │   ├── main.bicep
 │   ├── modules/
 │   └── README.md
-└── step4-secure-vm/    # Step 4: セキュアな VM 構成（Bastion + Managed Identity）
-    ├── main.bicep
+├── step4-secure-vm/    # Step 4: セキュアな VM 構成（Bastion + Managed Identity）
+│   ├── main.bicep
+│   ├── modules/
+│   └── README.md
+└── step5-cost-mgmt/    # Step 5: コスト分析・予算管理
+    ├── main.bicep      # targetScope = 'subscription'
     ├── modules/
     └── README.md
 ```
