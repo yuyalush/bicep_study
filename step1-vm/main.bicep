@@ -28,7 +28,7 @@ param adminUsername string = 'azureuser'
 param adminPassword string
 
 @description('VM のサイズ')
-param vmSize string = 'Standard_B2s'
+param vmSize string = 'Standard_B2ats_v2'
 
 // ------------------------------------------------------------
 // 変数 (var)
