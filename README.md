@@ -13,7 +13,7 @@ Azure のインフラをコードで管理する **Azure Bicep** の基礎を、
 |---|---|---|
 | [Step 1 — 仮想マシン](step1-vm/README.md) | Linux VM のデプロイ | `param` / `var` / `resource` / `output`・リソース間参照・暗黙的な依存関係 |
 | [Step 2 — Web Apps](step2-webapp/README.md) | App Service へのアプリデプロイ | `module`・モジュール間 output 参照・`uniqueString()`・`appSettings` |
-| [Step 3 — Azure Functions](step3-functions/README.md) | サーバーレス Functions のデプロイ | `listKeys()`・`az.environment()`・`resourceId()`・Consumption プラン |
+| [Step 3 — Azure Functions](step3-functions/README.md) | サーバーレス Functions のデプロイ | Managed Identity・RBAC ロール割り当て・identity-based connection・Consumption プラン |
 
 ---
 

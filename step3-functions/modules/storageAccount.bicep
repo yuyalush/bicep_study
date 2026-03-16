@@ -12,6 +12,9 @@ param location string
 @maxLength(24)
 param storageAccountName string
 
+@description('ソースコードをデプロイするユーザーの Object ID（Storage Blob Data Contributor ロールを付与）')
+param deployingUserObjectId string = ''
+
 resource storageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' = {
   name: storageAccountName
   location: location
@@ -27,6 +30,37 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' = {
   }
 }
 
+// Blob サービスリソース（コンテナー作成の親）
+resource blobService 'Microsoft.Storage/storageAccounts/blobServices@2023-01-01' = {
+  parent: storageAccount
+  name: 'default'
+}
+
+// Function App のデプロイパッケージを格納するコンテナー
+// WEBSITE_RUN_FROM_PACKAGE がここにアップロードした ZIP を指定する
+resource deploymentContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-01-01' = {
+  parent: blobService
+  name: 'deployments'
+  properties: {
+    publicAccess: 'None'  // パブリックアクセス無効（Managed Identity で読み取る）
+  }
+}
+
+// デプロイ担当ユーザーへの Blob 操作権限付与（指定時のみ）
+// Managed Identity によるキーレス認証環境では、デプロイ用の
+// az storage blob upload も AAD 認証（--auth-mode login）を使う。
+// そのため、デプロイユーザーにも Storage Blob Data Contributor が必要。
+resource deployingUserRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!empty(deployingUserObjectId)) {
+  name: guid(storageAccount.id, deployingUserObjectId, 'ba92f5b4-2d11-453d-a403-e96b0029c9fe')
+  scope: storageAccount
+  properties: {
+    // Storage Blob Data Contributor
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'ba92f5b4-2d11-453d-a403-e96b0029c9fe')
+    principalId: deployingUserObjectId
+    principalType: 'User'
+  }
+}
+
 // ------------------------------------------------------------
 // output
 // ------------------------------------------------------------
@@ -36,3 +70,6 @@ output storageAccountId string = storageAccount.id
 
 @description('ストレージアカウント名')
 output storageAccountName string = storageAccount.name
+
+@description('デプロイパッケージコンテナー名')
+output deploymentContainerName string = deploymentContainer.name

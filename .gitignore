@@ -1,6 +1,9 @@
 # node_modules は npm install で再生成できるため除外
-step2-webapp/app/node_modules/
-step3-functions/app/node_modules/
+# **/ で全階層の node_modules/ を一括除外する
+**/node_modules/
 
 # ZIP デプロイ用の一時ファイル
 *.zip
+
+# デプロイ用一時ディレクトリ（npm ci --omit=dev で生成する作業ディレクトリ）
+step3-functions/deploy_pkg/

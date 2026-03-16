@@ -24,6 +24,9 @@ param projectName string = 'bicep03'
 @allowed(['node', 'python', 'dotnet-isolated', 'java'])
 param functionsWorkerRuntime string = 'node'
 
+@description('ソースコードをデプロイするユーザーの Object ID。指定すると Storage Blob Data Contributor ロールが自動付与される。az ad signed-in-user show --query id -o tsv で取得。')
+param deployingUserObjectId string = ''
+
 // ------------------------------------------------------------
 // 変数
 // ------------------------------------------------------------
@@ -46,23 +49,23 @@ module storageModule 'modules/storageAccount.bicep' = {
   params: {
     location: location
     storageAccountName: storageAccountName
+    deployingUserObjectId: deployingUserObjectId
   }
 }
 
-// listKeys(): デプロイ済みリソースのアクセスキーを取得する組み込み関数
-// ① az.environment(): Bicep の組み込みネームスペース関数でエンドポイントを取得
-// ② resourceId(): モジュール output ではなく var を使い、デプロイ開始時点で解決できる ID を組み立てる
-//    → listKeys の第1引数はデプロイ開始時に確定できる値が必要なため
-// ※ 本番環境では Managed Identity + Key Vault の利用を推奨
-var storageConnectionString = 'DefaultEndpointsProtocol=https;AccountName=${storageAccountName};EndpointSuffix=${az.environment().suffixes.storage};AccountKey=${listKeys(resourceId('Microsoft.Storage/storageAccounts', storageAccountName), '2023-01-01').keys[0].value}'
-
 // ② Function App（Consumption プラン）
+// storageModule.outputs.storageAccountId を params で参照しているため、
+// Bicep が暗黙的な依存関係を自動設定する（dependsOn 不要）。
+//
+// Managed Identity 方式では listKeys() / 接続文字列が不要。
+// Function App の System-assigned Managed Identity が RBAC 経由でストレージに直接アクセスする。
 module functionAppModule 'modules/functionApp.bicep' = {
   name: 'deploy-functionApp'
   params: {
     location: location
     functionAppName: functionAppName
-    storageConnectionString: storageConnectionString  // @secure() パラメーターへ渡す
+    storageAccountName: storageAccountName                   // Managed Identity 接続用
+    storageAccountId: storageModule.outputs.storageAccountId // RBAC ロール割り当て用
     functionsWorkerRuntime: functionsWorkerRuntime
   }
 }
