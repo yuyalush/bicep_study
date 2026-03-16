@@ -23,6 +23,9 @@ step2-webapp/
 ├── modules/
 │   ├── appServicePlan.bicep     # App Service Plan の定義
 │   └── webApp.bicep             # Web App の定義
+├── app/
+│   ├── package.json             # Node.js プロジェクト設定
+│   └── server.js                # Express アプリ本体
 └── README.md
 ```
 
@@ -110,10 +113,40 @@ appSettings: [
 
 ---
 
+## サンプルアプリ（app/）
+
+`app/` ディレクトリに学習用の Node.js + Express アプリが同梱されています。
+
+| ファイル | 内容 |
+|---|---|
+| `package.json` | 依存パッケージの定義（express のみ） |
+| `server.js` | Express サーバー。2つのエンドポイントを持つ |
+
+**エンドポイント:**
+
+| パス | 内容 |
+|---|---|
+| `GET /` | HTML ページ。Bicep の `appSettings` で設定した環境変数を表示する |
+| `GET /health` | JSON でステータスと環境変数を返すヘルスチェック |
+
+アプリは `ENVIRONMENT` / `NODE_ENV` / `PORT` を環境変数（= Bicep の `appSettings`）から読み込むため、  
+デプロイ先の環境（dev / stg / prod）に応じて自動的に表示が変わります。
+
+**ローカル動作確認:**
+
+```bash
+cd app
+npm install
+npm start
+# → http://localhost:3000
+```
+
+---
+
 ## 前提条件
 
 - Azure CLI インストール済み
-- Node.js アプリ（または任意のランタイム）のソースコードが手元にあること
+- Node.js がインストール済みであること（`node --version`）
 
 ---
 
@@ -153,23 +186,79 @@ az deployment group create \
 
 デプロイ後、出力から `webAppUrl` を確認できます。
 
-### 5. ソースコードをデプロイ（ZIP デプロイ）
+### 5. 依存パッケージをインストール
 
-アプリのソースディレクトリを ZIP 圧縮して、`az webapp deploy` でプッシュします。
+ZIP デプロイ前にローカルで `node_modules` を生成しておきます。
 
 ```bash
-# ソースを ZIP 圧縮（例: Node.js アプリ）
-Compress-Archive -Path ./app/* -DestinationPath ./app.zip
+cd app
+npm install
+cd ..
+```
+
+### 6. ソースコードをデプロイ（ZIP デプロイ）
+
+デプロイ先の Web App 名は、手順 4 の出力に含まれる `appServicePlanName` の隣に表示される  
+`webAppHostName`（例: `bicep02-dev-app-xxxxxxx.azurewebsites.net`）のサブドメイン部分です。  
+`az deployment group show` で確認することもできます。
+
+**PowerShell:**
+
+```powershell
+# デプロイ済みの Web App 名を確認
+$WEB_APP_NAME = (az deployment group show `
+  --resource-group rg-bicep-step2 `
+  --name main `
+  --query properties.outputs.webAppHostName.value `
+  --output tsv).Split(".")[0]
+
+# app フォルダを ZIP 圧縮
+Compress-Archive -Path ./app/* -DestinationPath ./app.zip -Force
+
+# ZIP デプロイ
+az webapp deploy `
+  --resource-group rg-bicep-step2 `
+  --name $WEB_APP_NAME `
+  --src-path ./app.zip `
+  --type zip
+```
+
+**Bash:**
+
+```bash
+# デプロイ済みの Web App 名を確認
+WEB_APP_NAME=$(az deployment group show \
+  --resource-group rg-bicep-step2 \
+  --name main \
+  --query properties.outputs.webAppHostName.value \
+  --output tsv | cut -d. -f1)
+
+# app フォルダを ZIP 圧縮
+zip -r ./app.zip ./app
 
 # ZIP デプロイ
 az webapp deploy \
   --resource-group rg-bicep-step2 \
-  --name <webAppName>  \
+  --name $WEB_APP_NAME \
   --src-path ./app.zip \
   --type zip
 ```
 
-`WEBSITE_RUN_FROM_PACKAGE = '1'` が設定されているため、Azure が ZIP を自動解凍して実行します。
+`WEBSITE_RUN_FROM_PACKAGE = '1'` が設定されているため、Azure が ZIP をマウントして実行します。
+
+### 7. 動作確認
+
+```bash
+# ブラウザで開く（出力された webAppUrl を使用）
+az deployment group show \
+  --resource-group rg-bicep-step2 \
+  --name main \
+  --query properties.outputs.webAppUrl.value \
+  --output tsv
+
+# ヘルスチェック
+curl https://<webAppName>.azurewebsites.net/health
+```
 
 ---
 
@@ -189,6 +278,123 @@ az deployment group create \
 ```bash
 az group delete --name rg-bicep-step2 --yes --no-wait
 ```
+
+---
+
+## Tips
+
+### `node_modules` はリポジトリに含めない
+
+`node_modules` は `npm install` で再生成できるため、Git の管理対象から除外するのが一般的です。  
+プロジェクトルートの `.gitignore` に以下を追加してください。
+
+```
+step2-webapp/app/node_modules/
+```
+
+ZIP デプロイ前にローカルで `npm install` を実行するのが、手順 5 の目的です。
+
+### App Service 側でビルドする方法（応用）
+
+`node_modules` を ZIP に含めず、App Service に `package.json` だけをデプロイして  
+**Azure 側で `npm install` を実行させる**方法もあります。
+
+```bash
+az webapp config appsettings set \
+  --resource-group rg-bicep-step2 \
+  --name $WEB_APP_NAME \
+  --settings SCM_DO_BUILD_DURING_DEPLOYMENT=true
+```
+
+ただし、この方法は `WEBSITE_RUN_FROM_PACKAGE=1` との併用ができません。  
+今回の `main.bicep` の構成（Run-From-Package）とは組み合わせられないため、  
+手順 5 の `npm install` → ZIP デプロイの方法を推奨します。
+
+### GitHub リポジトリからデプロイする場合の主な変更点
+
+ZIP デプロイの代わりに、GitHub リポジトリと App Service を連携させて自動デプロイすることもできます。
+
+**Bicep 側の変更点:**
+
+`main.bicep` の `appSettings` から `WEBSITE_RUN_FROM_PACKAGE` を削除し、  
+`webApp.bicep` の `siteConfig` に `sourcecontrols` リソース、または以下の設定を追加します。
+
+```bicep
+// webApp.bicep に sourcecontrol リソースを追加
+resource sourceControl 'Microsoft.Web/sites/sourcecontrols@2023-01-01' = {
+  name: '${webApp.name}/web'
+  properties: {
+    repoUrl: 'https://github.com/<owner>/<repo>'
+    branch: 'main'
+    isManualIntegration: false  // GitHub Actions による自動デプロイを有効化
+  }
+}
+```
+
+**運用上の注意点:**
+
+| 項目 | ZIP デプロイ | GitHub 連携 |
+|---|---|---|
+| トリガー | 手動（CLI コマンド） | push / PR マージ で自動 |
+| `node_modules` | ZIP に含める（または SCM ビルド） | GitHub Actions で `npm install` → デプロイ |
+| `WEBSITE_RUN_FROM_PACKAGE` | `1` に設定 | 不要（削除する） |
+| 向いている用途 | 学習・スポット更新 | CI/CD パイプライン構築 |
+
+GitHub Actions を使う場合は、Azure がリポジトリに自動生成するワークフローファイル  
+(`.github/workflows/*.yml`) を利用するのが最も簡単です。
+
+### デプロイスロット（ステージング）を使う
+
+App Service の **デプロイスロット** を使うと、本番環境を止めずに新バージョンを  
+ステージング環境で検証し、問題なければ **スワップ（swap）** で本番に反映できます。
+
+**Bicep でスロットを定義する:**
+
+```bicep
+// webApp.bicep または modules/slot.bicep に追加
+resource stagingSlot 'Microsoft.Web/sites/slots@2023-01-01' = {
+  name: '${webApp.name}/staging'
+  location: location
+  kind: 'app,linux'
+  properties: {
+    serverFarmId: appServicePlanId
+    siteConfig: {
+      linuxFxVersion: linuxFxVersion
+      appSettings: [
+        { name: 'ENVIRONMENT',              value: 'staging' }
+        { name: 'WEBSITE_RUN_FROM_PACKAGE', value: '1' }
+      ]
+    }
+  }
+}
+```
+
+> スロットは **Standard (S1) 以上** のプランでのみ利用できます。  
+> 現在の `main.bicep` の `skuName` を `S1` 以上に変更してください。
+
+**ステージングへのデプロイとスワップ:**
+
+```powershell
+# ステージングスロットへ ZIP デプロイ
+az webapp deploy `
+  --resource-group rg-bicep-step2 `
+  --name $WEB_APP_NAME `
+  --slot staging `
+  --src-path ./app.zip `
+  --type zip
+
+# 動作確認（ステージング URL: https://<name>-staging.azurewebsites.net）
+curl https://$WEB_APP_NAME-staging.azurewebsites.net/health
+
+# 問題なければ本番とスワップ
+az webapp deployment slot swap `
+  --resource-group rg-bicep-step2 `
+  --name $WEB_APP_NAME `
+  --slot staging `
+  --target-slot production
+```
+
+スワップ後は元の本番コードがステージングスロットに移るため、問題があれば再スワップで即時ロールバックできます。
 
 ---
 

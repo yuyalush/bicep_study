@@ -1,0 +1,13 @@
+{
+  "name": "bicep-step2-app",
+  "version": "1.0.0",
+  "description": "Bicep Step2 学習用 Node.js Web アプリ",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  }
+}

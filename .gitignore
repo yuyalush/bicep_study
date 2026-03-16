@@ -1,0 +1,6 @@
+# node_modules は npm install で再生成できるため除外
+step2-webapp/app/node_modules/
+step3-functions/app/node_modules/
+
+# ZIP デプロイ用の一時ファイル
+*.zip
