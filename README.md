@@ -1,7 +1,7 @@
 # Azure Bicep 学習プロジェクト
 
 Azure のインフラをコードで管理する **Azure Bicep** の基礎を、段階的なハンズオンで学ぶプロジェクトです。  
-シンプルな VM 作成から始まり、Web Apps・Azure Functions へとステップアップします。
+シンプルな VM 作成から始まり、Web Apps・Azure Functions・セキュアなネットワーク構成へとステップアップします。
 
 詳しいコンセプトは [concept.md](concept.md) を参照してください。
 
@@ -14,6 +14,7 @@ Azure のインフラをコードで管理する **Azure Bicep** の基礎を、
 | [Step 1 — 仮想マシン](step1-vm/README.md) | Linux VM のデプロイ | `param` / `var` / `resource` / `output`・リソース間参照・暗黙的な依存関係 |
 | [Step 2 — Web Apps](step2-webapp/README.md) | App Service へのアプリデプロイ | `module`・モジュール間 output 参照・`uniqueString()`・`appSettings` |
 | [Step 3 — Azure Functions](step3-functions/README.md) | サーバーレス Functions のデプロイ | Managed Identity・RBAC ロール割り当て・identity-based connection・Consumption プラン |
+| [Step 4 — セキュアな VM](step4-secure-vm/README.md) | Bastion + Managed Identity による VM | Azure Bastion・Key Vault・パブリック IP 排除・`existing` リソース参照 |
 
 ---
 
@@ -32,11 +33,19 @@ base_bicep/
 │   │   ├── appServicePlan.bicep
 │   │   └── webApp.bicep
 │   └── README.md
-└── step3-functions/
-    ├── main.bicep           # モジュールを呼び出すエントリポイント
+├── step3-functions/
+│   ├── main.bicep          # モジュールを呼び出すエントリポイント
+│   ├── modules/
+│   │   ├── storageAccount.bicep
+│   │   └── functionApp.bicep
+│   └── README.md
+└── step4-secure-vm/
+    ├── main.bicep          # モジュールを呼び出すエントリポイント
     ├── modules/
-    │   ├── storageAccount.bicep
-    │   └── functionApp.bicep
+    │   ├── network.bicep   # VNet / サブネット / NSG
+    │   ├── bastion.bicep   # Azure Bastion / パブリック IP
+    │   ├── vm.bicep        # VM（Managed Identity・パブリック IP なし）
+    │   └── keyVault.bicep  # Key Vault / RBAC ロール割り当て
     └── README.md
 ```
 

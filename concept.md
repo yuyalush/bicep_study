@@ -40,8 +40,34 @@
 学習内容:
 - Function App と対応するストレージアカウント・App Service Plan の定義
 - Consumption プランと Premium プランの違い
-- Azure Functions のアプリ設定（`AzureWebJobsStorage` 等）
+- Managed Identity（マネージド ID）を用いたキーレス認証
+- identity-based connection（`AzureWebJobsStorage__accountName` 等）の設定
+- RBAC ロール割り当て（`Microsoft.Authorization/roleAssignments`）を Bicep で管理する
 - 既存の Web Apps 構成との差分・共通点の整理
+
+---
+
+### Step 4 — セキュアな VM 構成（Bastion + Managed Identity）
+
+**目標**: Step 1 で作成した VM 構成を発展させ、パブリック IP を持たないセキュアなアーキテクチャを Bicep で定義する。
+
+学習内容:
+- **Azure Bastion**: VM へのパブリックインターネット経由の直接接続を排除し、Azure Portal から安全にアクセスする
+- Bastion 専用サブネット（`AzureBastionSubnet`）の要件と NSG ルールの設計
+- VM からパブリック IP を除去し、NIC をプライベート接続のみに限定する
+- **System-assigned Managed Identity** を VM に付与し、アクセスキー・パスワード不要の Azure サービス連携を実現する
+- Key Vault との連携: VM が Managed Identity 経由でシークレットを取得するパターン（`Key Vault Secrets User` ロール）
+- Step 1 との Bicep 構文上の差分（追加リソース・削除リソース）の整理
+
+**Step 1 との主な構成変更点**:
+
+| 項目 | Step 1 | Step 4 |
+|---|---|---|
+| パブリック IP | あり（VM に直接付与） | **なし**（Bastion のみ） |
+| SSH/RDP 接続 | インターネット経由で直接 | **Azure Bastion 経由のみ** |
+| NSG | SSH(22) 等を開放 | Bastion 必要ポートのみ・VM への直接接続は拒否 |
+| VM の ID | なし | **System-assigned Managed Identity** |
+| シークレット管理 | パスワードをパラメーターで渡す | Key Vault + RBAC でパスワードレス化を目指す |
 
 ---
 
@@ -57,7 +83,11 @@ base_bicep/
 │   ├── main.bicep
 │   ├── modules/
 │   └── README.md
-└── step3-functions/    # Step 3: Azure Functions
+├── step3-functions/    # Step 3: Azure Functions
+│   ├── main.bicep
+│   ├── modules/
+│   └── README.md
+└── step4-secure-vm/    # Step 4: セキュアな VM 構成（Bastion + Managed Identity）
     ├── main.bicep
     ├── modules/
     └── README.md
