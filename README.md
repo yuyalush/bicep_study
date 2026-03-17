@@ -65,7 +65,7 @@ base_bicep/
 
 以下のツールをインストールしてください。
 
-```bash
+```powershell
 # Azure CLI のバージョン確認
 az --version
 
@@ -80,7 +80,7 @@ az bicep version
 
 ## クイックスタート
 
-```bash
+```powershell
 # 1. Azure にログイン
 az login
 
@@ -88,13 +88,79 @@ az login
 az group create --name rg-bicep-step1 --location japaneast
 
 # 3. Step 1 をデプロイ
-az deployment group create \
-  --resource-group rg-bicep-step1 \
-  --template-file step1-vm/main.bicep \
+az deployment group create `
+  --resource-group rg-bicep-step1 `
+  --template-file step1-vm/main.bicep `
   --parameters adminPassword="YourP@ssw0rd123"
 ```
 
 各ステップの詳細な手順は、それぞれのディレクトリの **README.md** を参照してください。
+
+---
+
+## PowerShell と Bash の読み替えガイド
+
+本プロジェクトのすべての手順は **PowerShell**（Windows PowerShell / PowerShell 7 以降）を前提に記載しています。  
+macOS / Linux 上で Bash（zsh 含む）を使う場合は以下の対応表を参考に読み替えてください。
+
+> **Azure CLI コマンド自体（`az` コマンド）は PowerShell・Bash 共通で使えます。**  
+> 変更が必要なのは「改行継続の記号」と「変数の代入構文」の 2 点です。
+
+### 1. 改行継続（複数行コマンド）
+
+| | PowerShell | Bash |
+|---|---|---|
+| 改行継続文字 | バッククォート `` ` `` | バックスラッシュ `\` |
+
+```powershell
+# PowerShell
+az deployment group create `
+  --resource-group rg-example `
+  --template-file main.bicep
+```
+
+```bash
+# Bash
+az deployment group create \
+  --resource-group rg-example \
+  --template-file main.bicep
+```
+
+### 2. 変数への代入と参照
+
+| 操作 | PowerShell | Bash |
+|---|---|---|
+| 変数への代入 | `$VAR = "value"` | `VAR="value"` |
+| コマンド出力を代入 | `$VAR = $(command)` | `VAR=$(command)` |
+| 変数の参照 | `$VAR` | `$VAR` |
+| 標準出力 | `Write-Host $VAR` または `echo $VAR` | `echo $VAR` |
+
+```powershell
+# PowerShell
+$WORKSPACE_ID = $(az deployment sub show `
+  --name main `
+  --query properties.outputs.workspaceId.value `
+  -o tsv)
+Write-Host $WORKSPACE_ID
+```
+
+```bash
+# Bash
+WORKSPACE_ID=$(az deployment sub show \
+  --name main \
+  --query properties.outputs.workspaceId.value \
+  -o tsv)
+echo $WORKSPACE_ID
+```
+
+### 3. その他の違い
+
+| 操作 | PowerShell | Bash |
+|---|---|---|
+| ファイルを ZIP 圧縮 | `Compress-Archive -Path ./app/* -DestinationPath app.zip -Force` | `zip -r app.zip ./app` |
+| テキストフィルタ | `Select-String "pattern"` | `grep "pattern"` |
+| 文字列の分割 | `$str.Split(".")[0]` | `echo $str \| cut -d. -f1` |
+| HTTP リクエスト | `Invoke-RestMethod "https://..."` | `curl https://...` |
 
 ---
 

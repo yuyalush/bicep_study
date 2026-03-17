@@ -180,42 +180,42 @@ output sshCommand string = 'ssh ${adminUsername}@${publicIp.properties.ipAddress
 
 ### 1. Azure にログイン
 
-```bash
+```powershell
 az login
 ```
 
 ### 2. リソースグループを作成
 
-```bash
-az group create \
-  --name rg-bicep-step1 \
+```powershell
+az group create `
+  --name rg-bicep-step1 `
   --location japaneast
 ```
 
 ### 3. Bicep ファイルを検証（エラーチェック）
 
-```bash
-az deployment group validate \
-  --resource-group rg-bicep-step1 \
-  --template-file main.bicep \
+```powershell
+az deployment group validate `
+  --resource-group rg-bicep-step1 `
+  --template-file main.bicep `
   --parameters adminPassword="YourP@ssw0rd123" location="japaneast"
 ```
 
 ### 4. What-if でデプロイ内容をプレビュー
 
-```bash
-az deployment group what-if \
-  --resource-group rg-bicep-step1 \
-  --template-file main.bicep \
+```powershell
+az deployment group what-if `
+  --resource-group rg-bicep-step1 `
+  --template-file main.bicep `
   --parameters adminPassword="YourP@ssw0rd123"
 ```
 
 ### 5. デプロイ実行
 
-```bash
-az deployment group create \
-  --resource-group rg-bicep-step1 \
-  --template-file main.bicep \
+```powershell
+az deployment group create `
+  --resource-group rg-bicep-step1 `
+  --template-file main.bicep `
   --parameters adminPassword="YourP@ssw0rd123"
 ```
 
@@ -230,7 +230,7 @@ az deployment group create \
 
 ### 6. SSH で接続確認
 
-```bash
+```powershell
 ssh azureuser@<publicIpAddress>
 ```
 
@@ -240,10 +240,10 @@ ssh azureuser@<publicIpAddress>
 
 コマンドラインで個別指定:
 
-```bash
-az deployment group create \
-  --resource-group rg-bicep-step1 \
-  --template-file main.bicep \
+```powershell
+az deployment group create `
+  --resource-group rg-bicep-step1 `
+  --template-file main.bicep `
   --parameters projectName=myapp environment=dev adminPassword="YourP@ssw0rd123"
 ```
 
@@ -261,10 +261,10 @@ az deployment group create \
 }
 ```
 
-```bash
-az deployment group create \
-  --resource-group rg-bicep-step1 \
-  --template-file main.bicep \
+```powershell
+az deployment group create `
+  --resource-group rg-bicep-step1 `
+  --template-file main.bicep `
   --parameters @parameters.json
 ```
 
@@ -274,7 +274,7 @@ az deployment group create \
 
 学習後はリソースグループごと削除してコストを節約できます。
 
-```bash
+```powershell
 az group delete --name rg-bicep-step1 --yes --no-wait
 ```
 
@@ -292,7 +292,7 @@ SkuNotAvailable: The requested VM size 'Standard_B2s' is not available in locati
 
 次のコマンドで、指定リージョン・サイズで利用可能な SKU を確認できます。
 
-```bash
+```powershell
 az vm list-skus --location centralus --size Standard_D --all --output table
 ```
 
@@ -306,10 +306,10 @@ az vm list-skus --location centralus --size Standard_D --all --output table
 `Restrictions` 列が空の行が利用可能な SKU です。  
 利用可能な SKU が見つかったら、`main.bicep` の `vmSize` パラメーターのデフォルト値、または `--parameters vmSize="<SKU名>"` で指定してください。
 
-```bash
-az deployment group create \
-  --resource-group rg-bicep-step1 \
-  --template-file main.bicep \
+```powershell
+az deployment group create `
+  --resource-group rg-bicep-step1 `
+  --template-file main.bicep `
   --parameters adminPassword="YourP@ssw0rd123" location="japaneast" vmSize="Standard_D2s_v3"
 ```
 
@@ -327,7 +327,7 @@ Microsoft.Network
 
 Azure CLI で `az provider register` コマンドでプロバイダーを登録できます。
 
-```bash
+```powershell
 az provider register --name Microsoft.Compute
 az provider register --name Microsoft.Network
 ```

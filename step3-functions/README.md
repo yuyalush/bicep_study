@@ -210,7 +210,7 @@ sku: {
 - Azure CLI インストール済み
 - Azure Functions Core Tools（ローカル開発・デプロイに使用）
 
-```bash
+```powershell
 npm install -g azure-functions-core-tools@4
 ```
 

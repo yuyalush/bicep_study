@@ -201,6 +201,9 @@ az deployment group create `
 
 VM 内のターミナルで以下を実行すると、Managed Identity 経由でトークンを取得できます。
 
+> **注意**: 以下のコマンドは Azure Bastion 経由で接続した **Linux VM 内のシェル**で実行します。  
+> ローカルマシンの PowerShell から実行するコマンドではありません。
+
 ```bash
 # Managed Identity でアクセストークンを取得
 curl -s 'http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01&resource=https%3A%2F%2Fvault.azure.net' \
