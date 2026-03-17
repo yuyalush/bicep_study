@@ -16,6 +16,10 @@ Azure のインフラをコードで管理する **Azure Bicep** の基礎を、
 | [Step 3 — Azure Functions](step3-functions/README.md) | サーバーレス Functions のデプロイ | Managed Identity・RBAC ロール割り当て・identity-based connection・Consumption プラン |
 | [Step 4 — セキュアな VM](step4-secure-vm/README.md) | Bastion + Managed Identity による VM | Azure Bastion・Key Vault・パブリック IP 排除・`existing` リソース参照 |
 | [Step 5 — コスト分析・予算管理](step5-cost-mgmt/README.md) | 予算アラート・ストレージ・Action Group のデプロイ | `targetScope = 'subscription'`・`az deployment sub create`・モジュールへの `scope` 指定・`utcNow()` の制約・`location: 'global'`・Azure Policy との衝突 |
+| [Step 6-1 — Activity Log → Log Analytics](step6-logging/step6-1/README.md) | サブスクリプションの操作履歴を Log Analytics に転送 | サブスクリプションスコープの `diagnosticSettings`・`targetScope = 'subscription'` |
+| [Step 6-2 — Entra ID ログ → Log Analytics](step6-logging/step6-2/README.md) | ポータルサインイン履歴を Log Analytics に転送 | `targetScope = 'tenant'`・`az deployment tenant create`・テナントスコープ権限昇格 |
+| [Step 6-3 — リソース別診断設定](step6-logging/step6-3/README.md) | Step 2〜4 の既存リソースに診断設定を後付け | `existing` キーワード・クロス RG デプロイ（`scope: resourceGroup()`） |
+| [Step 6-4 — Activity Log → Storage](step6-logging/step6-4/README.md) | Activity Log を Storage Account に長期アーカイブ | 条件付きリソース作成（`if` 条件）・`dependsOn` の明示・Cool アクセス層 |
 
 ---
 
@@ -48,15 +52,36 @@ base_bicep/
 │   │   ├── vm.bicep        # VM（Managed Identity・パブリック IP なし）
 │   │   └── keyVault.bicep  # Key Vault / RBAC ロール割り当て
 │   └── README.md
-└── step5-cost-mgmt/
-    ├── main.bicep          # targetScope = 'subscription' のエントリポイント
-    ├── modules/
-    │   ├── actionGroup.bicep  # 通知先グループ（location: 'global' 固定）
-    │   ├── budget.bicep       # 月次予算 / 3段階アラートしきい値
-    │   ├── storage.bicep      # ストレージアカウント / Blob コンテナ
-    │   ├── costExport.bicep   # コストエクスポート定義（参照用・Policy制約で未使用）
-    │   └── exportRbac.bicep   # エクスポート MI へのロール付与（参照用・未使用）
-    └── README.md
+├── step5-cost-mgmt/
+│   ├── main.bicep          # targetScope = 'subscription' のエントリポイント
+│   ├── modules/
+│   │   ├── actionGroup.bicep  # 通知先グループ（location: 'global' 固定）
+│   │   ├── budget.bicep       # 月次予算 / 3段階アラートしきい値
+│   │   ├── storage.bicep      # ストレージアカウント / Blob コンテナ
+│   │   ├── costExport.bicep   # コストエクスポート定義（参照用・Policy制約で未使用）
+│   │   └── exportRbac.bicep   # エクスポート MI へのロール付与（参照用・未使用）
+│   └── README.md
+└── step6-logging/
+    ├── step6-1/
+    │   ├── main.bicep          # targetScope = 'subscription' / Activity Log 診断設定
+    │   ├── modules/
+    │   │   └── logAnalytics.bicep  # Log Analytics Workspace
+    │   └── README.md
+    ├── step6-2/
+    │   ├── main.bicep          # targetScope = 'tenant' / Entra ID 診断設定
+    │   └── README.md
+    ├── step6-3/
+    │   ├── main.bicep          # targetScope = 'resourceGroup' / クロス RG デプロイ
+    │   ├── modules/
+    │   │   ├── keyVaultDiag.bicep    # Key Vault 診断設定（existing + scope）
+    │   │   ├── webAppDiag.bicep      # Web App 診断設定
+    │   │   └── functionsDiag.bicep   # Function App 診断設定
+    │   └── README.md
+    └── step6-4/
+        ├── main.bicep          # targetScope = 'subscription' / 条件付きリソース
+        ├── modules/
+        │   └── storageAccountDiag.bicep  # アーカイブ用ストレージアカウント
+        └── README.md
 ```
 
 ---
