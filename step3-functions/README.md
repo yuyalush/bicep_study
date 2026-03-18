@@ -45,7 +45,8 @@ step3-functions/
             ├── AzureWebJobsStorage__credential   ← "managedidentity"
             ├── FUNCTIONS_EXTENSION_VERSION
             ├── FUNCTIONS_WORKER_RUNTIME
-            └── WEBSITE_RUN_FROM_PACKAGE
+            ├── WEBSITE_RUN_FROM_PACKAGE
+            └── WEBSITE_RUN_FROM_PACKAGE_BLOB_MI_RESOURCE_ID
 ```
 
 ---
@@ -197,7 +198,8 @@ sku: {
 | `AzureWebJobsStorage__credential` | `managedidentity` | DefaultAzureCredential によるキーレス認証を指示 |
 | `FUNCTIONS_EXTENSION_VERSION` | `~4` | ランタイムのメジャーバージョン 4 の最新を使用 |
 | `FUNCTIONS_WORKER_RUNTIME` | `node` 等 | 言語ランタイム（`node`, `python`, `dotnet-isolated` 等） |
-| `WEBSITE_RUN_FROM_PACKAGE` | `1` | Run-From-Package モード（Step 2 と同様） |
+| `WEBSITE_RUN_FROM_PACKAGE` | Blob URL | Run-From-Package モード。Blob URL 形式で ZIP パッケージの場所を指定 |
+| `WEBSITE_RUN_FROM_PACKAGE_BLOB_MI_RESOURCE_ID` | `SystemAssigned` | Blob URL の取得に Managed Identity を使用する指定。**省略すると ZIP をダウンロードできず 404 になる** |
 
 > **`AzureWebJobsStorage` との違い**: 従来の単一キー（接続文字列）は `AzureWebJobsStorage__accountName` と  
 > `AzureWebJobsStorage__credential` という 2 つのキーに分割されます。`__` 区切りで指定することで  
@@ -326,6 +328,57 @@ az group delete --name rg-bicep-step3 --yes --no-wait
 | スケーリング | 手動/ルール | 自動（コールドスタートあり） |
 | 課金 | 時間固定 | 実行回数 × 実行時間 |
 | 適したユースケース | 常時稼働の Web サービス | イベント駆動・バッチ・API の補完 |
+
+---
+
+## Tips: ストレージのネットワーク制限とプラン選択
+
+Function App は `WEBSITE_RUN_FROM_PACKAGE` で指定した Blob URL からデプロイパッケージ（ZIP）をダウンロードします。  
+ストレージのネットワーク制限によっては、このダウンロードがブロックされ **関数コードがロードされない（HTTP 404）** 場合があります。
+
+### ストレージのネットワーク設定と動作
+
+| 設定 | Consumption プラン | Premium / Dedicated プラン |
+|---|---|---|
+| `publicNetworkAccess: Enabled` + `defaultAction: Allow` | ✅ 動作する | ✅ 動作する |
+| `publicNetworkAccess: Enabled` + `defaultAction: Deny` + `bypass: AzureServices` | ❌ **動作しない**（※1） | ❌ **動作しない**（※1） |
+| `publicNetworkAccess: Enabled` + `defaultAction: Deny` + IP ルール | ⚠️ 不安定（※2） | ⚠️ 条件付き |
+| `publicNetworkAccess: Disabled` + Private Endpoint | ❌ VNet 統合不可 | ✅ 推奨構成 |
+
+> **※1** `bypass: AzureServices`（信頼された Azure サービスのバイパス）は Azure Backup や Event Grid 等が対象であり、  
+> Function App ランタイムの Blob ダウンロードは**対象外**です。
+>
+> **※2** Consumption プランはアウトバウンド IP が動的に変わるため、IP ルールでの許可は安定しません。
+
+### プラン別の推奨構成
+
+| 要件 | 推奨プラン | ストレージ構成 |
+|---|---|---|
+| 低コスト・開発/検証用 | **Consumption (Y1)** | `publicNetworkAccess: Enabled`, `defaultAction: Allow` |
+| ストレージへのパブリックアクセスを完全遮断 | **Premium (EP1〜)** または **Dedicated (B1〜)** | VNet 統合 + Private Endpoint + `publicNetworkAccess: Disabled` |
+| コスト重視だがある程度の制限が必要 | **Consumption (Y1)** | `allowSharedKeyAccess: false` + `allowBlobPublicAccess: false`（※キーレス認証で保護） |
+
+### よくあるトラブル: 関数の 404 エラー
+
+Function App の URL にアクセスすると **ルート（`/`）は 200 を返すのに `/api/<関数名>` が 404** になる場合、  
+関数コードがロードされていない可能性があります。以下を確認してください:
+
+1. **`WEBSITE_RUN_FROM_PACKAGE_BLOB_MI_RESOURCE_ID`** が設定されているか  
+   → 未設定だと Managed Identity で Blob をダウンロードできない
+2. **ストレージの `publicNetworkAccess`** が `Enabled` か  
+   → `Disabled` だと Consumption プランからはアクセス不可
+3. **ストレージの `defaultAction`** が `Allow` か  
+   → `Deny` の場合、`bypass: AzureServices` だけでは不足
+
+確認コマンド:
+```powershell
+# ランタイムにロードされた関数を確認（空なら ZIP 読み込み失敗）
+$masterKey = az functionapp keys list -n <func-app-name> -g <rg-name> --query masterKey -o tsv
+Invoke-RestMethod "https://<func-app-name>.azurewebsites.net/admin/functions" -Headers @{"x-functions-key"=$masterKey}
+
+# ストレージのネットワーク設定を確認
+az storage account show -n <storage-name> --query "{publicNetworkAccess:publicNetworkAccess, defaultAction:networkRuleSet.defaultAction, bypass:networkRuleSet.bypass}" -o json
+```
 
 ---
 

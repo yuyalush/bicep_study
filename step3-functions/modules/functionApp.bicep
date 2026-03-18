@@ -108,6 +108,13 @@ resource functionApp 'Microsoft.Web/sites@2023-01-01' = {
           name: 'WEBSITE_RUN_FROM_PACKAGE'
           value: 'https://${storageAccountName}.blob.${az.environment().suffixes.storage}/deployments/func.zip'
         }
+        {
+          // WEBSITE_RUN_FROM_PACKAGE の Blob URL を Managed Identity で認証するために必要。
+          // この設定がないと、ストレージで allowSharedKeyAccess=false / allowBlobPublicAccess=false の場合に
+          // ランタイムが ZIP パッケージをダウンロードできず、関数コードがロードされない（404 になる）。
+          name: 'WEBSITE_RUN_FROM_PACKAGE_BLOB_MI_RESOURCE_ID'
+          value: 'SystemAssigned'
+        }
       ]
     }
   }
