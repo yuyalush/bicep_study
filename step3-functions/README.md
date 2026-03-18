@@ -207,6 +207,32 @@ sku: {
 
 ---
 
+## CORS 設定 — Azure Portal からの関数テスト実行
+
+Azure Portal の「コードとテスト」メニューから HTTP トリガーを直接実行するには、  
+`siteConfig.cors.allowedOrigins` に `https://portal.azure.com` を追加する必要があります。  
+この設定がないと Portal からのリクエストが **CORS エラー** で拒否されます。
+
+```bicep
+resource functionApp 'Microsoft.Web/sites@2023-01-01' = {
+  ...
+  properties: {
+    siteConfig: {
+      cors: {
+        allowedOrigins: [
+          'https://portal.azure.com'
+        ]
+      }
+      ...
+    }
+  }
+}
+```
+
+> **開発・テスト中のみ `*`（ワイルドカード）も指定できますが、本番環境では必要なオリジンのみを列挙してください。**
+
+---
+
 ## 前提条件
 
 - Azure CLI インストール済み

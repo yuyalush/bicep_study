@@ -76,6 +76,13 @@ resource functionApp 'Microsoft.Web/sites@2023-01-01' = {
       linuxFxVersion: 'Node|${nodeVersion}'
       ftpsState: 'Disabled'
       minTlsVersion: '1.2'
+      cors: {
+        // Azure Portal から「コードとテスト」で関数を直接実行するために必要。
+        // この設定がないと Portal 上でのテスト実行が CORS エラーで失敗する。
+        allowedOrigins: [
+          'https://portal.azure.com'
+        ]
+      }
       appSettings: [
         {
           // Managed Identity 接続方式（identity-based connection）:
