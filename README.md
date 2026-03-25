@@ -20,6 +20,7 @@ Azure のインフラをコードで管理する **Azure Bicep** の基礎を、
 | [Step 6-2 — Entra ID ログ → Log Analytics](step6-logging/step6-2/README.md) | ポータルサインイン履歴を Log Analytics に転送 | `targetScope = 'tenant'`・`az deployment tenant create`・テナントスコープ権限昇格 |
 | [Step 6-3 — リソース別診断設定](step6-logging/step6-3/README.md) | Step 2〜4 の既存リソースに診断設定を後付け | `existing` キーワード・クロス RG デプロイ（`scope: resourceGroup()`） |
 | [Step 6-4 — Activity Log → Storage](step6-logging/step6-4/README.md) | Activity Log を Storage Account に長期アーカイブ | 条件付きリソース作成（`if` 条件）・`dependsOn` の明示・Cool アクセス層 |
+| [Step 7 — VM バックアップの設定](step7-backup/README.md) | Step 1 の VM に Azure Backup を設定 | `existing` キーワード・`parent` プロパティ・Recovery Services Vault・バックアップポリシー |
 
 ---
 
@@ -82,6 +83,9 @@ base_bicep/
         ├── modules/
         │   └── storageAccountDiag.bicep  # アーカイブ用ストレージアカウント
         └── README.md
+step7-backup/
+├── main.bicep                  # existing VM 参照 / Recovery Services Vault / Backup Policy / Protected Item
+└── README.md
 ```
 
 ---
