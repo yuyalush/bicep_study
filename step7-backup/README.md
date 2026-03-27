@@ -351,7 +351,11 @@ az provider register --name Microsoft.RecoveryServices
 
 ## 次のステップ
 
-Step 7 が完了したら、バックアップジョブの監視やポイントインタイムリストア（PITR）も試してみましょう。
+Step 7 が完了したら、**[Step 8 — バックアップからの復元](../step8-restore/README.md)** に進んでください。  
+Step 8 では、ここで設定したバックアップを使って VM を復元する方法（元の場所・別の場所・ディスク復元）と、  
+`Microsoft.Resources/deploymentScripts` を使った Bicep による復元の自動化を学びます。
+
+バックアップジョブの監視やポイントインタイムリストア（PITR）も試してみましょう。
 
 - [Azure VM バックアップの概要](https://learn.microsoft.com/ja-jp/azure/backup/backup-azure-vms-introduction)
 - [Recovery Services コンテナーの作成](https://learn.microsoft.com/ja-jp/azure/backup/backup-create-rs-vault)
